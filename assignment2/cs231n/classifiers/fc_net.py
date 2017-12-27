@@ -87,9 +87,8 @@ class TwoLayerNet(object):
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-        A1, cache1 = affine_forward(X, W1, b1)
-        relu1, relu1_cache = relu_forward(A1)
-        A2, cache2 = affine_forward(relu1, W2, b2)
+        A1, cache1 = affine_relu_forward(X, W1, b1)
+        A2, cache2 = affine_forward(A1, W2, b2)
         scores = np.copy(A2)
         # If y is None then we are in test mode so just return scores
         if y is None:
@@ -110,9 +109,17 @@ class TwoLayerNet(object):
         loss, dscores = softmax_loss(scores, y)
 
         # add regularization
+        loss += 0.5 * self.reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
 
+        # compute gradients
+        dx2, dw2, db2 = affine_backward(dscores, cache2)
+        dx1, dw1, db1 = affine_relu_backward(dx2, cache1)
 
-        print(loss)
+        grads['b1'] = db1
+        grads['b2'] = db2
+
+        grads['W1'] = dw1 + self.reg * W1
+        grads['W2'] = dw2 + self.reg * W2
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
