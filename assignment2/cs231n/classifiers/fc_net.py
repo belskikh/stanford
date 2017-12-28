@@ -185,25 +185,28 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
+
         # weights initialization
         num_hidden_layers = len(hidden_dims)
-        for i in range(num_hidden_layers):
+        for i in range(num_hidden_layers + 1):
             # check first layer
             if i == 0:
                 w_size = (input_dim, hidden_dims[i])
                 b_size = (hidden_dims[i],)
 
             # check last layer
-            elif i == num_hidden_layers - 1:
-                w_size = (hidden_dims[i], num_classes)
+            elif i == num_hidden_layers:
+                w_size = (hidden_dims[-1], num_classes)
                 b_size = (num_classes,)
             else:
                 w_size = (hidden_dims[i - 1], hidden_dims[i])
                 b_size = (hidden_dims[i],)
 
             self.params["W{}".format(i + 1)] = np.random.normal(scale=weight_scale, size=w_size)
+            print(i + 1)
+            print(self.params["W{}".format(i + 1)].shape)
             self.params["b{}".format(i + 1)] = np.zeros(b_size)
-
+            print(self.params["b{}".format(i + 1)].shape)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
