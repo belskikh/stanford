@@ -96,16 +96,18 @@ def rmsprop(x, dx, config=None):
     config.setdefault('epsilon', 1e-8)
     config.setdefault('cache', np.zeros_like(x))
 
-    next_x = None
+    next_x = x
     ###########################################################################
     # TODO: Implement the RMSprop update formula, storing the next value of x #
     # in the next_x variable. Don't forget to update cache value stored in    #
     # config['cache'].                                                        #
     ###########################################################################
-    pass
+    cache = config['decay_rate'] * config['cache'] + (1 - config['decay_rate']) * (dx * dx)
+    next_x += - config['learning_rate'] * dx / (np.sqrt(cache) + config['epsilon'])
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
+    config['cache'] = cache
 
     return next_x, config
 
@@ -133,13 +135,29 @@ def adam(x, dx, config=None):
     config.setdefault('v', np.zeros_like(x))
     config.setdefault('t', 1)
 
-    next_x = None
+    next_x = x
     ###########################################################################
     # TODO: Implement the Adam update formula, storing the next value of x in #
     # the next_x variable. Don't forget to update the m, v, and t variables   #
     # stored in config.                                                       #
     ###########################################################################
-    pass
+    lr = config['learning_rate']
+    beta1 = config['beta1']
+    beta2 = config['beta2']
+    eps = config['epsilon']
+    m = config['m']
+    v = config['v']
+    t = config['t']
+
+    m = beta1 * m + (1 - beta1) * dx
+    mt = m / (1 - beta1**t)
+    v = beta2 * v + (1 - beta2) * (dx**2)
+    vt = v / (1 - beta2**t)
+    x += - lr * mt / (np.sqrt(vt) + eps)
+
+    config['m'] = m
+    config['v'] = v
+    config['t'] += 1
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
