@@ -266,6 +266,8 @@ class FullyConnectedNet(object):
         fc_cache = {}
         relu_cache = {}
 
+
+        X = np.reshape(X, [X.shape[0], -1])  # Flatten our input images.
         # relu-forward through all layers except the last one
         for i in range(self.num_layers - 1):
             fc_act, fc_cache[str(i + 1)] = affine_forward(X, self.params['W{}'.format(i+1)], self.params['b{}'.format(i+1)])
