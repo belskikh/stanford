@@ -186,25 +186,21 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zero.                                #
         ############################################################################
 
-        # weights initialization
-        for i in range(self.num_layers):
-            # check first layer
-            if i == 0:
-                w_size = (input_dim, hidden_dims[i])
-                b_size = (hidden_dims[i],)
+        # weights init
+        for i in range(self.num_layers - 1):
+            self.params['W{}'.format(i + 1)] = np.random.normal(0, weight_scale, [input_dim, hidden_dims[i]])
+            self.params['b{}'.format(i + 1)] = np.zeros([hidden_dims[i]])
 
-            # check last layer
-            elif i == self.num_layers - 1:
-                w_size = (hidden_dims[-1], num_classes)
-                b_size = (num_classes,)
-            else:
-                w_size = (hidden_dims[i - 1], hidden_dims[i])
-                b_size = (hidden_dims[i],)
+            if self.use_batchnorm:
+                self.params['beta{}'.format(i + 1)] = np.zeros([hidden_dims[i]])
+                self.params['gamma{}'.format(i + 1)] = np.ones([hidden_dims[i]])
 
-            self.params["W{}".format(i + 1)] = np.random.normal(scale=weight_scale, size=w_size)
-            # print("W{}".format(i + 1), self.params["W{}".format(i + 1)].shape)
-            self.params["b{}".format(i + 1)] = np.zeros(b_size)
-            # print("b{}".format(i + 1), self.params["b{}".format(i + 1)].shape)
+            input_dim = hidden_dims[i]  # Set the input dim of next layer to be output dim of current layer.
+
+        # last layer
+        self.params['W{}'.format(self.num_layers)] = np.random.normal(0, weight_scale, [input_dim, num_classes])
+        self.params['b{}'.format(self.num_layers)] = np.zeros([num_classes])
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -265,13 +261,17 @@ class FullyConnectedNet(object):
 
         fc_cache = {}
         relu_cache = {}
-
+        bn_cache = {}
 
         X = np.reshape(X, [X.shape[0], -1])  # Flatten our input images.
         # relu-forward through all layers except the last one
         for i in range(self.num_layers - 1):
             fc_act, fc_cache[str(i + 1)] = affine_forward(X, self.params['W{}'.format(i+1)], self.params['b{}'.format(i+1)])
-            relu_act, relu_cache[str(i + 1)] = relu_forward(fc_act)
+            if self.use_batchnorm:
+                bn_act, bn_cache[str(i + 1)] = batchnorm_forward(fc_act, self.params['gamma'+str(i+1)], self.params['beta'+str(i+1)], self.bn_params[i])
+                relu_act, relu_cache[str(i + 1)] = relu_forward(bn_act)
+            else:
+                relu_act, relu_cache[str(i + 1)] = relu_forward(fc_act)
 
             X = relu_act.copy()
 
@@ -315,8 +315,13 @@ class FullyConnectedNet(object):
         # backprop other layers from the last to the first
         for i in range(self.num_layers - 1, 0, -1):
             drelu = relu_backward(dx_last, relu_cache[str(i)])
-
-            dx_last, dw_last, db_last = affine_backward(drelu, fc_cache[str(i)])
+            if self.use_batchnorm:
+                dbatch, dgamma, dbeta = batchnorm_backward(drelu, bn_cache[str(i)])
+                dx_last, dw_last, db_last = affine_backward(dbatch, fc_cache[str(i)])
+                grads['beta{}'.format(i)] = dbeta
+                grads['gamma{}'.format(i)] = dgamma
+            else:
+                dx_last, dw_last, db_last = affine_backward(drelu, fc_cache[str(i)])
 
             grads['W{}'.format(i)] = dw_last + self.reg * self.params['W{}'.format(i)]
             grads['b{}'.format(i)] = db_last
