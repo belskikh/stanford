@@ -338,8 +338,10 @@ def dropout_forward(x, dropout_param):
 
         # inverted dropout scale factor
         scale_factor = 1 / (1 - p)
+        # scale the mask for backward computations
+        mask = mask * scale_factor
 
-        out = x * mask * scale_factor
+        out = x * mask
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################

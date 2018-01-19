@@ -262,17 +262,25 @@ class FullyConnectedNet(object):
         fc_cache = {}
         relu_cache = {}
         bn_cache = {}
+        do_cache = {}
 
         X = np.reshape(X, [X.shape[0], -1])  # Flatten our input images.
         # relu-forward through all layers except the last one
         for i in range(self.num_layers - 1):
             fc_act, fc_cache[str(i + 1)] = affine_forward(X, self.params['W{}'.format(i+1)], self.params['b{}'.format(i+1)])
+
+            # batchnorm rules
             if self.use_batchnorm:
                 bn_act, bn_cache[str(i + 1)] = batchnorm_forward(fc_act, self.params['gamma'+str(i+1)], self.params['beta'+str(i+1)], self.bn_params[i])
                 relu_act, relu_cache[str(i + 1)] = relu_forward(bn_act)
             else:
                 relu_act, relu_cache[str(i + 1)] = relu_forward(fc_act)
 
+            # dropout rules
+            if self.use_dropout:
+                relu_act, do_cache[str(i + 1)] = dropout_forward(relu_act, self.dropout_param)
+
+            # make a copy to avoid link reassignment
             X = relu_act.copy()
 
         # last layer forward pass without relu
@@ -314,7 +322,14 @@ class FullyConnectedNet(object):
 
         # backprop other layers from the last to the first
         for i in range(self.num_layers - 1, 0, -1):
+
+            # dropout rules
+            if self.use_dropout:
+                dx_last = dropout_backward(dx_last, do_cache[str(i)])
+
             drelu = relu_backward(dx_last, relu_cache[str(i)])
+
+            # batchnorm rules
             if self.use_batchnorm:
                 dbatch, dgamma, dbeta = batchnorm_backward(drelu, bn_cache[str(i)])
                 dx_last, dw_last, db_last = affine_backward(dbatch, fc_cache[str(i)])
