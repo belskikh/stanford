@@ -414,7 +414,31 @@ def conv_forward_naive(x, w, b, conv_param):
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+
+    # a lot of time was spent here
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant')
+
+    H_out = np.int(1 + (H + 2 * pad - HH) / stride)
+    W_out = np.int(1 + (W + 2 * pad - WW) / stride)
+
+    # output init
+    out = np.zeros((N, F, H_out, W_out))
+
+    # Thank you, Andrew Ng
+    for nn in range(N):
+        for ff in range(F):
+            for hh in range(H_out):
+                for ww in range(W_out):
+                    out[nn, ff, hh, ww] = np.sum(w[ff, ...] * x_pad[nn, :, hh*stride: hh*stride+HH, ww*stride: ww*stride+WW]) + b[ff]
+
+
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -439,7 +463,43 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    x, w, b, conv_param = cache
+
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+
+    _, F, H_out, W_out = dout.shape
+
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant')
+
+    # init grad matrices
+    dx = np.zeros(x_pad.shape)
+    dw = np.zeros(w.shape)
+    db = np.zeros(b.shape)
+
+    # dw calculation. Sum all incoming gradients. dw = dout * x
+    for nn in range(N):
+        for ff in range(F):
+            for hh in range(H_out):
+                for ww in range(W_out):
+                    dw[ff, ...] += dout[nn, ff, hh, ww] * x_pad[nn, :, hh*stride: hh*stride+HH, ww*stride: ww*stride+WW]
+
+    # dx calculation. Sum all incoming gradients. dx = dout * w
+    for nn in range(N):
+        for ff in range(F):
+            for hh in range(H_out):
+                for ww in range(W_out):
+                    dx[nn, :, hh * stride: hh * stride + HH, ww * stride: ww * stride + WW] += dout[nn, ff, hh, ww] * w[ff, ...]
+
+    # remove padding from dx.
+    dx = dx[:, :, pad: H + pad, pad: W + pad]
+
+    # db calculation. Sum all incoming gradients
+    for ff in range(F):
+        db[ff] += np.sum(dout[:, ff, :, :])
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
